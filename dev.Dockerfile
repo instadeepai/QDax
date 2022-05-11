@@ -20,6 +20,7 @@ FROM debian:bullseye-20190708 as test-image
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 ENV PIPENV_VENV_IN_PROJECT=true PIP_NO_CACHE_DIR=false PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PATH=/opt/conda/envs/qdaxpy38/bin/:$PATH
 
 COPY --from=conda /opt/conda/envs/. /opt/conda/envs/
 COPY requirements-dev.txt ./
