@@ -57,6 +57,8 @@ RUN apt-get update && \
     libglfw3 \
     libosmesa6-dev \
     patchelf \
+    python3=3.8* \
+    python3-pip \
     screen \
     sudo \
     tmux \
