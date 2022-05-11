@@ -16,9 +16,10 @@ RUN micromamba create -y --file /tmp/environment.yaml \
     && find /opt/conda/ -follow -type f -name '*.pyc' -delete
 
 
-FROM python as test-image
-ENV PATH=/opt/conda/envs/qdaxpy38/bin/:$PATH APP_FOLDER=/app
-ENV PYTHONPATH=$APP_FOLDER:$PYTHONPATH
+FROM debian:bullseye-20190708 as test-image
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV PIPENV_VENV_IN_PROJECT=true PIP_NO_CACHE_DIR=false PIP_DISABLE_PIP_VERSION_CHECK=1
 
 COPY --from=conda /opt/conda/envs/. /opt/conda/envs/
 COPY requirements-dev.txt ./
@@ -27,40 +28,28 @@ RUN pip install -r requirements-dev.txt
 
 
 
-FROM nvidia/cuda:11.4.1-cudnn8-devel-ubuntu20.04 as cuda-image
-ENV PATH=/opt/conda/envs/qdaxpy38/bin/:$PATH APP_FOLDER=/app
-ENV PYTHONPATH=$APP_FOLDER:$PYTHONPATH
+FROM conda as conda-cuda
 
+RUN pip --no-cache-dir install jaxlib==0.3.2+cuda11.cudnn82 \
+    -f https://storage.googleapis.com/jax-releases/jax_releases.html \
+    && rm -rf /tmp/*
+
+
+FROM nvidia/cuda:11.4.1-cudnn8-runtime-ubuntu20.04 as dev-image
+# The dev-image does not contain the any file, qdax is expected to be mounted
+# afterwards
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV PIPENV_VENV_IN_PROJECT=true PIP_NO_CACHE_DIR=false PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV TZ=Europe/Paris
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.0/targets/x86_64-linux/lib
+ENV PATH=/opt/conda/envs/qdaxpy38/bin/:$PATH
 
 ENV DISTRO ubuntu2004
 ENV CPU_ARCH x86_64
 RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/$DISTRO/$CPU_ARCH/3bf863cc.pub
 
-
-COPY --from=conda /opt/conda/envs/. /opt/conda/envs/
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.0/targets/x86_64-linux/lib
-
-ENV TZ=Europe/Paris
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN pip --no-cache-dir install jaxlib==0.3.2+cuda11.cudnn82 \
-    -f https://storage.googleapis.com/jax-releases/jax_releases.html \
-    && rm -rf /tmp/*
-
-WORKDIR $APP_FOLDER
-
-ARG USER_ID=1000
-ARG GROUP_ID=1000
-ENV USER=eng
-ENV GROUP=eng
-RUN groupadd --gid ${GROUP_ID} $GROUP && useradd -g $GROUP --uid ${USER_ID} --shell /usr/sbin/nologin -m $USER  && chown -R $USER:$GROUP $APP_FOLDER
-USER $USER
-
-
-FROM cuda-image as dev-image
-# The dev-image does not contain the any file, qdax is expected to be mounted
-# afterwards
-
-USER root
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
@@ -71,9 +60,6 @@ RUN apt-get update && \
     libglfw3 \
     libosmesa6-dev \
     patchelf \
-    python3-opengl \
-    python3-dev=3.8* \
-    python3-pip \
     screen \
     sudo \
     tmux \
@@ -84,14 +70,59 @@ RUN apt-get update && \
     xvfb && \
     rm -rf /var/lib/apt/lists/*
 
+COPY --from=conda-cuda /opt/conda/envs/. /opt/conda/envs/
 
 COPY requirements-dev.txt /tmp/requirements-dev.txt
-RUN pip --no-cache-dir install -r /tmp/requirements-dev.txt && rm -rf /tmp/*
+RUN pip --no-cache-dir install -r /tmp/requirements-dev.txt && \
+    pip install pyopengl && \
+    rm -rf /tmp/*
 USER $USER
 
-FROM cuda-image as run-image
-# The run-image (default) is the same as the dev-image with the some files directly
-# copied inside
+
+FROM nvidia/cuda:11.4.1-cudnn8-runtime-ubuntu20.04 as run-image-cuda
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+ENV PIPENV_VENV_IN_PROJECT=true PIP_NO_CACHE_DIR=false PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PATH=/opt/conda/envs/qdaxpy38/bin/:$PATH APP_FOLDER=/app
+ENV PYTHONPATH=$APP_FOLDER:$PYTHONPATH
+
+COPY --from=conda-cuda /opt/conda/envs/. /opt/conda/envs/
+
+WORKDIR $APP_FOLDER
+
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+ENV USER=eng
+ENV GROUP=eng
+RUN groupadd --gid ${GROUP_ID} $GROUP && useradd -g $GROUP --uid ${USER_ID} --shell /usr/sbin/nologin -m $USER  && chown -R $USER:$GROUP $APP_FOLDER
+USER $USER
+
+COPY qdax qdax
+COPY setup.py ./
+
+RUN pip install .
+
+WORKDIR /
+
+CMD ["python"]
+
+FROM debian:bullseye-20190708 as run-image
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 CONDA_DIR=/opt/conda
+ENV PIPENV_VENV_IN_PROJECT=true PIP_NO_CACHE_DIR=false PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PATH=/opt/conda/envs/qdaxpy38/bin/:$PATH APP_FOLDER=/app
+ENV PYTHONPATH=$APP_FOLDER:$PYTHONPATH
+
+COPY --from=conda /opt/conda/envs/. /opt/conda/envs/
+
+WORKDIR $APP_FOLDER
+
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+ENV USER=eng
+ENV GROUP=eng
+RUN groupadd --gid ${GROUP_ID} $GROUP && useradd -g $GROUP --uid ${USER_ID} --shell /usr/sbin/nologin -m $USER  && chown -R $USER:$GROUP $APP_FOLDER
+USER $USER
 
 COPY qdax qdax
 COPY setup.py ./
