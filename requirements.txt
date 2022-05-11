@@ -4,6 +4,7 @@ flax==0.4.1
 gym == 0.15.4
 ipython
 jax==0.3.2
+jaxlib==0.3.2
 jupyter
 numpy == 1.19.5
 scikit-learn==1.0.1
