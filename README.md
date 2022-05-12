@@ -8,9 +8,12 @@
 QDax is a tool to accelerate Quality-Diveristy (QD) and neuro-evolution algorithms through hardware accelerators and massive parallelism. QDax has been developped as a research framework: it is flexible and easy to extend.
 
 QDax paper: https://arxiv.org/abs/2202.01258
+
 QDax documentation: https://qdax.readthedocs.io/en/latest/
 
 ## Hands on QDax
+[![Open All Collab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/instadeepai/QDax/blob/2-instadeep-new-structure-suggestion/)
+
 To see how QDax works, you can run this [notebook](./notebooks/mapelites_example.ipynb) on colab, it is an example of MAP-Elites evolving a population of controllers on a chosen Brax environment (Walker by default).
 
 ## Installation

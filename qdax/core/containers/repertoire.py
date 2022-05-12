@@ -140,7 +140,7 @@ class MapElitesRepertoire(Repertoire):
     """
     def __init__(
         self,
-        dummy_genotype: Genotype,
+        genotypes: Genotype,
         centroids: Centroid
     ) -> None:
         """Instantiate the Repertoire with default values.
@@ -154,8 +154,8 @@ class MapElitesRepertoire(Repertoire):
         num_centroids = centroids.shape[0]
         default_fitnesses = -jnp.inf * jnp.ones(shape=num_centroids)
         default_genotypes = jax.tree_map(
-            lambda x: jnp.zeros(shape=(num_centroids,) + x.shape),
-            dummy_genotype,
+            lambda x: jnp.zeros(shape=(num_centroids,) + x.shape[1:]),
+            genotypes,
         )
         default_descriptors = jnp.zeros(shape=(num_centroids, centroids.shape[-1]))
 

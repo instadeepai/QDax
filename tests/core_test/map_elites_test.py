@@ -131,15 +131,10 @@ def test_map_elites() -> None:
         minval=min_bd,
         maxval=max_bd,
     )
-    # dummy genotype
-    dummy_genotype = jax.tree_map(
-        lambda x: x[0],
-        init_variables
-    )
 
     # instantiate repertoire
     repertoire = MapElitesRepertoire(
-        dummy_genotype=dummy_genotype,
+        genotypes=init_variables,
         centroids=centroids
     )
 
