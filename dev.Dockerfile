@@ -41,7 +41,6 @@ ENV PIPENV_VENV_IN_PROJECT=true PIP_NO_CACHE_DIR=false PIP_DISABLE_PIP_VERSION_C
 ENV TZ=Europe/Paris
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11.0/targets/x86_64-linux/lib
-ENV PATH=/opt/venv/bin:$PATH
 
 ENV DISTRO ubuntu2004
 ENV CPU_ARCH x86_64
@@ -69,6 +68,9 @@ RUN apt-get update && \
     xvfb && \
     rm -rf /var/lib/apt/lists/*
 
+ENV PATH=/opt/venv/bin:$PATH
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
+
 COPY --from=venv-cuda /opt/venv/. /opt/venv/
 
 COPY requirements-dev.txt ./
@@ -82,6 +84,7 @@ FROM nvidia/cuda:11.4.1-cudnn8-runtime-ubuntu20.04 as run-image-cuda
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8 PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 ENV PATH=/opt/venv/bin:$PATH
+RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 COPY --from=venv-cuda /opt/venv/. /opt/venv/
 
