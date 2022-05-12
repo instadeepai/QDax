@@ -4,9 +4,9 @@ from typing import Any, Dict, Tuple
 import jax
 import jax.numpy as jnp
 import pytest
-
 from qdax import environments
-from qdax.core.containers.repertoire import MapElitesRepertoire, compute_cvt_centroids
+from qdax.core.containers.repertoire import (MapElitesRepertoire,
+                                             compute_cvt_centroids)
 from qdax.core.emitters.mutation_operators import isoline_variation
 from qdax.core.emitters.standard_emitters import MixingEmitter
 from qdax.core.map_elites import MAPElites
@@ -131,9 +131,20 @@ def test_map_elites() -> None:
         minval=min_bd,
         maxval=max_bd,
     )
+    # dummy genotype
+    dummy_genotype = jax.tree_map(
+        lambda x: x[0],
+        init_variables
+    )
+
+    # instantiate repertoire
+    repertoire = MapElitesRepertoire(
+        dummy_genotype=dummy_genotype,
+        centroids=centroids
+    )
 
     # Compute initial repertoire
-    repertoire, _, random_key = map_elites.init(init_variables, centroids, random_key)
+    repertoire, _, random_key = map_elites.init(init_variables, repertoire, random_key)
 
     # Prepare scan over map_elites update to perform several iterations at a time
     @jax.jit

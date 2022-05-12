@@ -9,9 +9,8 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jax.flatten_util import ravel_pytree
-from sklearn.cluster import KMeans
-
 from qdax.types import Centroid, Descriptor, Fitness, Genotype, RNGKey
+from sklearn.cluster import KMeans
 
 
 def compute_cvt_centroids(
@@ -119,8 +118,10 @@ def get_cells_indices(
     func = jax.vmap(lambda x: _get_cells_indices(x, centroids))
     return func(batch_of_descriptors)
 
+class Repertoire(flax.struct.PyTreeNode):
+    pass
 
-class MapElitesRepertoire(flax.struct.PyTreeNode):
+class MapElitesRepertoire(Repertoire):
     """
     Class for the repertoire in Map Elites.
 
@@ -137,11 +138,31 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
         centroids: an array the contains the centroids of the tesselation. The array
             shape is (num_centroids, num_descriptors).
     """
+    def __init__(
+        self,
+        dummy_genotype: Genotype,
+        centroids: Centroid
+    ) -> None:
+        """Instantiate the Repertoire with default values.
 
-    genotypes: Genotype
-    fitnesses: Fitness
-    descriptors: Descriptor
-    centroids: Centroid
+        Args:
+            genotypes: Any genotype like object.
+            centroids: The centroids of the repertoire.
+        """
+
+        # Initialize grid with default values
+        num_centroids = centroids.shape[0]
+        default_fitnesses = -jnp.inf * jnp.ones(shape=num_centroids)
+        default_genotypes = jax.tree_map(
+            lambda x: jnp.zeros(shape=(num_centroids,) + x.shape),
+            dummy_genotype,
+        )
+        default_descriptors = jnp.zeros(shape=(num_centroids, centroids.shape[-1]))
+
+        self.genotypes = default_genotypes
+        self.fitnesses = default_fitnesses
+        self.descriptors = default_descriptors
+        self.centroids = centroids
 
     def save(self, path: str = "./") -> None:
         """Saves the grid on disk in the form of .npy files.
@@ -187,11 +208,15 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
         descriptors = jnp.load(path + "descriptors.npy")
         centroids = jnp.load(path + "centroids.npy")
 
-        return MapElitesRepertoire(
+        repertoire = MapElitesRepertoire(
             genotypes=genotypes,
-            fitnesses=fitnesses,
-            descriptors=descriptors,
-            centroids=centroids,
+            centroids=centroids
+        )
+
+        return repertoire.add(
+            batch_of_genotypes=genotypes,
+            batch_of_fitnesses=fitnesses,
+            batch_of_descriptors=descriptors,
         )
 
     @partial(jax.jit, static_argnames=("num_samples",))
@@ -304,41 +329,6 @@ class MapElitesRepertoire(flax.struct.PyTreeNode):
         descriptors: Descriptor,
         centroids: Centroid,
     ) -> MapElitesRepertoire:
-        """
-        Initialize a Map-Elites repertoire with an initial population of genotypes.
-        Requires the definition of centroids that can be computed with any method
-        such as CVT or Euclidean mapping.
-
-        Note: this function has been kept outside of the object MapElites, so it can
-        be called easily called from other modules.
-
-        Args:
-            genotypes: initial genotypes, pytree in which leaves
-                have shape (batch_size, num_features)
-            fitnesses: fitness of the initial genotypes of shape (batch_size,)
-            descriptors: descriptors of the initial genotypes
-                of shape (batch_size, num_descriptors)
-            centroids: tesselation centroids of shape (batch_size, num_descriptors)
-
-        Returns:
-            an initialized MAP-Elite repertoire
-        """
-
-        # Initialize grid with default values
-        num_centroids = centroids.shape[0]
-        default_fitnesses = -jnp.inf * jnp.ones(shape=num_centroids)
-        default_genotypes = jax.tree_map(
-            lambda x: jnp.zeros(shape=(num_centroids,) + x.shape[1:]),
-            genotypes,
-        )
-        default_descriptors = jnp.zeros(shape=(num_centroids, centroids.shape[-1]))
-
-        repertoire = MapElitesRepertoire(
-            genotypes=default_genotypes,
-            fitnesses=default_fitnesses,
-            descriptors=default_descriptors,
-            centroids=centroids,
-        )
 
         # Add initial values to the grid
         new_repertoire = repertoire.add(genotypes, descriptors, fitnesses)

@@ -6,8 +6,7 @@ from typing import Callable, Optional, Tuple
 
 import jax
 from chex import ArrayTree
-
-from qdax.core.containers.repertoire import MapElitesRepertoire
+from qdax.core.containers.repertoire import Repertoire
 from qdax.core.emitters.emitter import Emitter, EmitterState
 from qdax.types import Centroid, Descriptor, Fitness, Genotype, Metrics, RNGKey
 
@@ -33,7 +32,7 @@ class MAPElites:
             [Genotype, RNGKey], Tuple[Fitness, Descriptor, ArrayTree, RNGKey]
         ],
         emitter: Emitter,
-        metrics_function: Callable[[MapElitesRepertoire], Metrics],
+        metrics_function: Callable[[Repertoire], Metrics],
     ) -> None:
         self._scoring_function = scoring_function
         self._emitter = emitter
@@ -43,9 +42,9 @@ class MAPElites:
     def init(
         self,
         init_genotypes: Genotype,
-        centroids: Centroid,
+        repertoire: Repertoire,
         random_key: RNGKey,
-    ) -> Tuple[MapElitesRepertoire, Optional[EmitterState], RNGKey]:
+    ) -> Tuple[Repertoire, Optional[EmitterState], RNGKey]:
         """
         Initialize a Map-Elites grid with an initial population of genotypes. Requires
         the definition of centroids that can be computed with any method such as
@@ -64,11 +63,10 @@ class MAPElites:
             init_genotypes, random_key
         )
 
-        repertoire = MapElitesRepertoire.init(
-            genotypes=init_genotypes,
-            fitnesses=fitnesses,
-            descriptors=descriptors,
-            centroids=centroids,
+        repertoire = repertoire.add(
+            batch_of_genotypes=init_genotypes,
+            batch_of_fitnesses=fitnesses,
+            batch_of_descriptors=descriptors,
         )
         # get initial state of the emitter
         emitter_state, random_key = self._emitter.init(
@@ -89,10 +87,10 @@ class MAPElites:
     @partial(jax.jit, static_argnames=("self",))
     def update(
         self,
-        repertoire: MapElitesRepertoire,
+        repertoire: Repertoire,
         emitter_state: Optional[EmitterState],
         random_key: RNGKey,
-    ) -> Tuple[MapElitesRepertoire, Optional[EmitterState], Metrics, RNGKey]:
+    ) -> Tuple[Repertoire, Optional[EmitterState], Metrics, RNGKey]:
         """
         Performs one iteration of the MAP-Elites algorithm.
         1. A batch of genotypes is sampled in the archive and the genotypes are copied.
