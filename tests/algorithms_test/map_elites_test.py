@@ -156,3 +156,7 @@ def test_map_elites() -> None:
     )
 
     pytest.assume(repertoire is not None)
+
+
+if __name__ == "__main__":
+    test_map_elites()

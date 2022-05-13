@@ -68,6 +68,7 @@ RUN apt-get update && \
     xvfb && \
     rm -rf /var/lib/apt/lists/*
 
+
 ENV PATH=/opt/venv/bin:$PATH
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
@@ -77,6 +78,8 @@ COPY requirements-dev.txt ./
 RUN pip --no-cache-dir install -r requirements-dev.txt && \
     pip install pyopengl && \
     rm -rf /tmp/*
+COPY --from=nvidia/cuda:11.4.1-cudnn8-devel-ubuntu20.04 /usr/local/cuda/bin/ptxas /usr/local/cuda/bin/ptxas
+
 USER $USER
 
 
@@ -87,6 +90,7 @@ ENV PATH=/opt/venv/bin:$PATH
 RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 COPY --from=venv-cuda /opt/venv/. /opt/venv/
+COPY --from=nvidia/cuda:11.4.1-cudnn8-devel-ubuntu20.04 /usr/local/cuda/bin/ptxas /usr/local/cuda/bin/ptxas
 
 CMD ["python"]
 
