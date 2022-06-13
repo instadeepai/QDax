@@ -1,7 +1,7 @@
 [![Documentation Status](https://readthedocs.org/projects/qdax/badge/?version=latest)](https://qdax.readthedocs.io/en/latest/?badge=latest)
 ![pytest](https://github.com/adaptive-intelligent-robotics/QDax/actions/workflows/ci.yaml/badge.svg?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/adaptive-intelligent-robotics/QDax/blob/main/LICENSE)
-
+[![codecov](https://codecov.io/gh/instadeepai/QDax/branch/feat/codecov/graph/badge.svg?token=URRQ42LJUR)](https://codecov.io/gh/instadeepai/QDax)
 
 
 # QDax: Accelerated Quality-Diversity
