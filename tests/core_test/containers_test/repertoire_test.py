@@ -48,6 +48,8 @@ def test_repertoire() -> None:
     # do an addition
     repertoire = repertoire.add(fake_genotypes, fake_descriptors, fake_fitnesses)
 
+    # test code cov
+
     # check that the repertoire looks like expected
     expected_genotypes = jnp.array(
         [
