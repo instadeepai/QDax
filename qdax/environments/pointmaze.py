@@ -123,12 +123,9 @@ class PointMaze(env.Env):
         """Run one timestep of the environment's dynamics."""
 
         # clip action taken
-        min_action = self._low / self._scale_action_space
-        max_action = self._high / self._scale_action_space
-        action = jp.clip(action, min_action, max_action)
-
-        # get the step count
-        steps = state.info["steps"] + 1
+        min_action = self._low
+        max_action = self._high
+        action = jp.clip(action, min_action, max_action) / self._scale_action_space
 
         # get the current position
         x_pos_old, y_pos_old = state.obs
@@ -158,8 +155,7 @@ class PointMaze(env.Env):
         )
 
         new_obs = jp.array([x_pos, y_pos])
-        # update steps
-        state.info["steps"] = steps
+
         # update state descriptor
         state.info["state_descriptor"] = new_obs
         # update the state
